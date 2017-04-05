@@ -1,8 +1,35 @@
-import React, { Component } from 'react';
-import { gql, graphql } from 'react-apollo';
+import React, { Component, PropTypes } from 'react';
+import { ApolloClient, compose, gql, graphql, withApollo } from 'react-apollo';
+
+const PEOPLE_QUERY = gql`
+query {
+  people {
+    id
+    name
+  }
+}`
 
 class App extends Component {
+  static propTypes = {
+    client: PropTypes.instanceOf(ApolloClient),
+    data: PropTypes.shape({
+        loading: PropTypes.bool.isRequired,
+        people: PropTypes.arrayOf(
+            PropTypes.shape({
+                id: PropTypes.string.isRequired,
+                name: PropTypes.string.isRequired,
+            })
+        ),
+    }).isRequired,
+  };
+
+  resetStore = () => {
+    console.info('resetting store');
+    this.props.client.resetStore();
+  }
+
   render() {
+    console.info('newProps', this.props)
     const { data: { loading, people } } = this.props;
     return (
       <main>
@@ -20,6 +47,7 @@ class App extends Component {
             Currently the schema just serves a list of people with names and ids.
           </p>
         </header>
+        <button onClick={() => this.resetStore()}>Reset Store</button>
         {loading ? (
           <p>Loading…</p>
         ) : (
@@ -36,11 +64,7 @@ class App extends Component {
   }
 }
 
-export default graphql(
-  gql`{
-    people {
-      id
-      name
-    }
-  }`,
-)(App)
+export default compose(
+  graphql(PEOPLE_QUERY),
+  withApollo,
+)(App);

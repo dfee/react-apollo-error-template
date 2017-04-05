@@ -3,6 +3,7 @@ import { schema } from './schema';
 
 export const networkInterface = {
   query({ query, variables, operationName }) {
+    console.info('issuing query');
     return delay(500).then(() => {
       return graphql(
         schema,
