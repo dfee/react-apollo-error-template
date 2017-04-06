@@ -1,33 +1,94 @@
 import {
-  GraphQLSchema,
-  GraphQLObjectType,
   GraphQLID,
-  GraphQLString,
   GraphQLList,
+  GraphQLNonNull,
+  GraphQLObjectType,
+  GraphQLSchema,
+  GraphQLString,
 } from 'graphql';
+import {
+  connectionDefinitions,
+  connectionFromArray,
+  mutationWithClientMutationId,
+} from 'graphql-relay';
 
-const PersonType = new GraphQLObjectType({
-  name: 'Person',
-  fields: {
-    id: { type: GraphQLID },
-    name: { type: GraphQLString },
-  },
+
+const STORY = {
+  comments: [{id: 'a0', text: 'Hello'}],
+  id: '42',
+};
+
+
+var CommentType = new GraphQLObjectType({
+  name: 'Comment',
+  fields: () => ({
+    id: {type: GraphQLID},
+    text: {type: GraphQLString},
+  }),
 });
 
-const peopleData = [
-  { id: 1, name: 'John Smith' },
-  { id: 2, name: 'Sara Smith' },
-  { id: 3, name: 'Budd Deey' },
-];
+const {connectionType: commentConnection} =
+  connectionDefinitions({name: 'Comment', nodeType: CommentType});
 
-const QueryType = new GraphQLObjectType({
-  name: 'Query',
-  fields: {
-    people: {
-      type: new GraphQLList(PersonType),
-      resolve: () => peopleData,
+var StoryType = new GraphQLObjectType({
+  name: 'Story',
+  fields: () => ({
+    id: { type: GraphQLString },
+    comments: {
+      type: commentConnection,
+      resolve: (story, args) => connectionFromArray(story.comments, args),
+    },
+    comments_old: { type: new GraphQLList(CommentType) },
+  }),
+});
+
+
+var CreateCommentMutation = mutationWithClientMutationId({
+  name: 'CreateComment',
+  inputFields: {
+    text: { type: new GraphQLNonNull(GraphQLString) },
+  },
+  outputFields: {
+    story: {
+      type: StoryType,
+      resolve: () => STORY,
     },
   },
+  mutateAndGetPayload: ({text}) => {
+    var newComment = {
+      id: 'a' + STORY.comments.length.toString(),
+      text,
+    };
+    STORY.comments.push(newComment);
+    dispatchEvent(new CustomEvent('SUBSCRIPTION_DATA', { detail: { id: '0' } }));
+    return newComment;
+  },
 });
 
-export const schema = new GraphQLSchema({ query: QueryType });
+
+export default new GraphQLSchema({
+  query: new GraphQLObjectType({
+    name: 'Query',
+    fields: () => ({
+      story: {
+        type: StoryType,
+        resolve: () => STORY,
+      },
+    }),
+  }),
+  mutation: new GraphQLObjectType({
+    name: 'Mutation',
+    fields: () => ({
+      createComment: CreateCommentMutation,
+    }),
+  }),
+  subscription: new GraphQLObjectType({
+    name: 'Subscription',
+    fields: () => ({
+      newComment: {
+        type: CommentType,
+        resolve: () => STORY.comments[STORY.comments.length - 1],
+      },
+    }),
+  }),
+});
