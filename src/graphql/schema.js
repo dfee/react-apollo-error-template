@@ -5,6 +5,7 @@ import {
   GraphQLObjectType,
   GraphQLSchema,
   GraphQLString,
+  GraphQLUnionType,
 } from 'graphql';
 import {
   connectionDefinitions,
@@ -13,6 +14,7 @@ import {
 } from 'graphql-relay';
 
 
+/* Begin Story */
 const STORY = {
   comments: [{id: 'a0', text: 'Hello'}],
   id: '42',
@@ -33,7 +35,7 @@ const {connectionType: commentConnection} =
 var StoryType = new GraphQLObjectType({
   name: 'Story',
   fields: () => ({
-    id: { type: GraphQLString },
+    id: {type: GraphQLID},
     comments: {
       type: commentConnection,
       resolve: (story, args) => connectionFromArray(story.comments, args),
@@ -64,12 +66,74 @@ var CreateCommentMutation = mutationWithClientMutationId({
     return newComment;
   },
 });
+/* End Story */
 
+
+/* Begin People */
+const PEOPLE = [
+  {id: 0, name: 'abe'},
+  {id: 1, name: 'bill'},
+  {id: 2, name: 'carl'},
+]
+
+var PersonType = new GraphQLObjectType({
+  name: 'Person',
+  fields: () => ({
+    id: {type: GraphQLID},
+    name: {type: GraphQLString},
+  })
+})
+
+var CreatePersonMutation = mutationWithClientMutationId({
+  name: 'CreatePerson',
+  inputFields: {
+    name: { type: new GraphQLNonNull(GraphQLString) },
+  },
+  outputFields: {
+    person: {
+      type: PersonType,
+      resolve: () => PEOPLE[PEOPLE.length - 1],
+    },
+  },
+  mutateAndGetPayload: ({name}) => {
+    var newPerson = {
+      id: PEOPLE.length.toString(),
+      name,
+    };
+    PEOPLE.push(newPerson);
+    return newPerson;
+  },
+});
+/* End People */
+
+
+/* Begin Union */
+const PrimaryType = new GraphQLUnionType({
+  name: 'PrimaryType',
+  types: [StoryType, PersonType],
+  resolveType: (data) => {
+    if (data.name) {
+      return PersonType;
+    }
+    if (data.comments) {
+      return StoryType;
+    }
+  }
+})
+/* End Union */
 
 export default new GraphQLSchema({
   query: new GraphQLObjectType({
     name: 'Query',
     fields: () => ({
+      primary: {
+        type: new GraphQLList(PrimaryType),
+        resolve: () => PEOPLE.concat([STORY])
+      },
+      people: {
+        type: new GraphQLList(PersonType),
+        resolve: () => PEOPLE,
+      },
       story: {
         type: StoryType,
         resolve: () => STORY,
@@ -79,6 +143,7 @@ export default new GraphQLSchema({
   mutation: new GraphQLObjectType({
     name: 'Mutation',
     fields: () => ({
+      createPerson: CreatePersonMutation,
       createComment: CreateCommentMutation,
     }),
   }),

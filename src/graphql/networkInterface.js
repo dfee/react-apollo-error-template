@@ -72,7 +72,7 @@ class DummyNetworkInterface {
   }
 
   onSubscriptionData = (e) => {
-    const { id: subId, payload } = e.detail;
+    const { id: subId } = e.detail;
     const { handler, options } = this.subscriptions[subId];
     const queryPromise = this.query(options)
     queryPromise.then(result => {

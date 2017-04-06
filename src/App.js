@@ -1,7 +1,8 @@
 import React, { Component, PropTypes } from 'react';
 import { ApolloClient, compose, withApollo } from 'react-apollo';
 
-import Story from './Story';
+import Person from './Person';
+import Primary from './Primary';
 
 
 class App extends Component {
@@ -12,10 +13,14 @@ class App extends Component {
   render() {
     return (
       <main>
+        <h1>Directions</h1>
+        <p>Add a person (bottom) and then click `reset store`.</p>
+        <p>You'll notice that current people is updated, but not current primary objects.</p>
         <button onClick={() => this.props.client.resetStore()}>
           Reset Store
         </button>
-        <Story id={42} />
+        <Primary />
+        <Person />
       </main>
     );
   }
