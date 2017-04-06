@@ -23,13 +23,9 @@ class App extends Component {
     }).isRequired,
   };
 
-  resetStore = () => {
-    console.info('resetting store');
-    this.props.client.resetStore();
-  }
+  resetStore = () => this.props.client.resetStore();
 
   render() {
-    console.info('newProps', this.props)
     const { data: { loading, people } } = this.props;
     return (
       <main>
